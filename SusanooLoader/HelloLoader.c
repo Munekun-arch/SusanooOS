@@ -1,14 +1,15 @@
 #include <Uefi.h>
 #include <Library/UefiLib.h>
+#include <Library/UefiBootServicesTableLib.h>
 
 EFI_STATUS
 EFIAPI
-efi_main (
-    IN EFI_HANDLE ImageHandle,
-    IN EFI_SYSTEM_TABLE *SystemTable
-    )
+UefiMain (
+  IN EFI_HANDLE ImageHandle,
+  IN EFI_SYSTEM_TABLE *SystemTable
+  )
 {
-    Print(L"Hello, Susanoo Loader!\n");
-    return EFI_SUCCESS;
+  Print(L"Hello SusanooOS Loader!\n");
+  return EFI_SUCCESS;
 }
 

@@ -19,8 +19,11 @@
   RegisterFilterLib         | MdePkg/Library/RegisterFilterLibNull/RegisterFilterLibNull.inf
 
   # UEFI 基本
-  UefiLib                   | MdePkg/Library/UefiLib/UefiLib.inf
+      UefiLib                   | MdePkg/Library/UefiLib/UefiLib.inf
   UefiApplicationEntryPoint | MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
+ StackCheckLib             | MdePkg/Library/StackCheckLib/StackCheckLib.inf
+  StackCheckFailureHookLib  | MdePkg/Library/StackCheckFailureHookLibNull/StackCheckFailureHookLibNull.inf
+
   UefiBootServicesTableLib  | MdePkg/Library/UefiBootServicesTableLib/UefiBootServicesTableLib.inf
   UefiRuntimeServicesTableLib | MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
   DevicePathLib             | MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
@@ -35,6 +38,10 @@
 
 [Components]
   HelloLoader.inf
+
+
+
+
 
 
 

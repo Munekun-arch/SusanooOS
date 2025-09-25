@@ -12,10 +12,11 @@ echo "=== SusanooOS Loader ビルド ==="
 echo "ターゲットアーキテクチャ: $ARCH"
 
 # --- 環境変数 ---
-export WORKSPACE=$WORKSPACE
+# EDK2 SusanooOS setup
+export WORKSPACE=$HOME/SusanooOS/edk2
 export EDK_TOOLS_PATH=$WORKSPACE/BaseTools
 export CONF_PATH=$WORKSPACE/Conf
-export PACKAGES_PATH=$LOADER_DIR:$WORKSPACE
+export PACKAGES_PATH=$HOME/SusanooOS/SusanooLoader:$HOME/SusanooOS/edk2
 source $WORKSPACE/edksetup.sh BaseTools
 export TARGET=DEBUG
 export TARGET_ARCH=$ARCH
