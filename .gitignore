@@ -1,0 +1,29 @@
+# === EDK2 ビルド成果物 ===
+Build/
+Conf/BuildEnv.sh
+
+# === 中間生成物 ===
+*.o
+*.d
+*.pdb
+*.map
+*.lst
+*.tmp
+*.log
+
+# === Python キャッシュ ===
+*.pyc
+__pycache__/
+
+# === QEMU 関連 ===
+*.img
+*.fd
+
+# === エディタ/IDE ===
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
