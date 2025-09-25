@@ -1,0 +1,24 @@
+[Defines]
+  INF_VERSION      = 0x00010017
+  BASE_NAME        = HelloLoader
+  FILE_GUID        = 12345678-9abc-def0-1234-56789abcdef0
+  MODULE_TYPE      = UEFI_APPLICATION
+  VERSION_STRING   = 0.1
+  ENTRY_POINT      = efi_main
+
+[Sources]
+  HelloLoader.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiLib
+  UefiBootServicesTableLib
+  BaseLib
+  BaseMemoryLib
+  PrintLib
+  MemoryAllocationLib
+  DebugLib
+  PcdLib
+
