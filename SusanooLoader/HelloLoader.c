@@ -1,7 +1,25 @@
 #include <Uefi.h>
-#include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiLib.h>
 #include <Protocol/GraphicsOutput.h>
+
+EFI_GRAPHICS_OUTPUT_PROTOCOL *gGop;
+
+// ピクセル描画
+VOID PutPixel(UINTN X, UINTN Y, UINT32 Color) {
+    UINT32 *FrameBuffer = (UINT32*)gGop->Mode->FrameBufferBase;
+    UINTN PixelsPerScanLine = gGop->Mode->Info->PixelsPerScanLine;
+    FrameBuffer[Y * PixelsPerScanLine + X] = Color;
+}
+
+// 矩形塗りつぶし
+VOID FillRect(UINTN X, UINTN Y, UINTN W, UINTN H, UINT32 Color) {
+    for (UINTN j = 0; j < H; j++) {
+        for (UINTN i = 0; i < W; i++) {
+            PutPixel(X + i, Y + j, Color);
+        }
+    }
+}
 
 EFI_STATUS
 EFIAPI
@@ -10,52 +28,37 @@ UefiMain (
   IN EFI_SYSTEM_TABLE *SystemTable
   )
 {
-  EFI_STATUS Status;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop;
+    EFI_STATUS Status;
 
-  // GOP プロトコルを取得
-  Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&Gop);
-  if (EFI_ERROR(Status)) {
-    Print(L"Unable to locate GOP\n");
-    return Status;
-  }
-
-  UINTN Width  = Gop->Mode->Info->HorizontalResolution;
-  UINTN Height = Gop->Mode->Info->VerticalResolution;
-  UINTN PixelsPerScanLine = Gop->Mode->Info->PixelsPerScanLine;
-
-  UINT32 *FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
-
-  // 背景を真っ赤に塗る
-  UINT32 Red = 0x00FF0000;  // BGRA (赤)
-  for (UINTN y = 0; y < Height; y++) {
-    for (UINTN x = 0; x < Width; x++) {
-      FrameBuffer[y * PixelsPerScanLine + x] = Red;
+    // GOP プロトコル取得
+    Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&gGop);
+    if (EFI_ERROR(Status)) {
+        Print(L"GOP not found!\n");
+        return Status;
     }
-  }
 
-  // 中央に白い四角を描画
-  UINTN BoxSize = 200;
-  UINTN BoxX0 = (Width - BoxSize) / 2;
-  UINTN BoxY0 = (Height - BoxSize) / 2;
-  UINT32 White = 0x00FFFFFF; // 白
-  for (UINTN y = BoxY0; y < BoxY0 + BoxSize; y++) {
-    for (UINTN x = BoxX0; x < BoxX0 + BoxSize; x++) {
-      FrameBuffer[y * PixelsPerScanLine + x] = White;
+    // 画面サイズ取得
+    UINTN Width  = gGop->Mode->Info->HorizontalResolution;
+    UINTN Height = gGop->Mode->Info->VerticalResolution;
+
+    // 背景を黒に
+    FillRect(0, 0, Width, Height, 0x000000);
+
+    // 赤い四角を中央に描画
+    UINTN rectW = 200;
+    UINTN rectH = 150;
+    UINTN startX = (Width  - rectW) / 2;
+    UINTN startY = (Height - rectH) / 2;
+    FillRect(startX, startY, rectW, rectH, 0xFF0000);
+
+    // 表示保持（キー入力待ち）
+    SystemTable->ConIn->Reset(SystemTable->ConIn, FALSE);
+    EFI_INPUT_KEY Key;
+    Print(L"\nPress any key to exit...\n");
+    while ((Status = SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &Key)) == EFI_NOT_READY) {
+        gBS->Stall(1000); // 1ms
     }
-  }
 
-  // 文字を表示
-  Print(L"Hello SusanooOS Loader!\n");
-  Print(L"Press any key to exit...\n");
-
-  // キー入力待ち
-  EFI_INPUT_KEY Key;
-  SystemTable->ConIn->Reset(SystemTable->ConIn, FALSE);
-  while ((Status = SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &Key)) == EFI_NOT_READY) {
-    gBS->Stall(100000); // 0.1秒待機
-  }
-
-  return EFI_SUCCESS;
+    return EFI_SUCCESS;
 }
 
