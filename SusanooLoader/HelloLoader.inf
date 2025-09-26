@@ -17,5 +17,6 @@
   UefiApplicationEntryPoint
   StackCheckLib
   StackCheckFailureHookLib
-
+　UefiBootServicesTableLib
+  MemoryAllocationLib
 
