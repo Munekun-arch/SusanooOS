@@ -1,42 +1,104 @@
 #include <Uefi.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Protocol/GraphicsOutput.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/BaseMemoryLib.h>
+#include <Protocol/SimpleFileSystem.h>
+#include <Protocol/LoadedImage.h>
+#include <Guid/FileInfo.h>
 
-EFI_STATUS EFIAPI UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
-    EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop;
-    EFI_STATUS Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&Gop);
-    if (EFI_ERROR(Status)) return Status;
+EFI_STATUS
+EFIAPI
+UefiMain (
+  IN EFI_HANDLE ImageHandle,
+  IN EFI_SYSTEM_TABLE *SystemTable
+  )
+{
+    EFI_STATUS Status;
+    EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
+    EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *SimpleFs;
+    EFI_FILE_PROTOCOL *Root, *File;
 
-    UINT32 Width = Gop->Mode->Info->HorizontalResolution;
-    UINT32 Height = Gop->Mode->Info->VerticalResolution;
-    UINT32 *FB = (UINT32 *)Gop->Mode->FrameBufferBase;
-    UINT32 Pitch = Gop->Mode->Info->PixelsPerScanLine;
-
-    // アニメーション: 四角が右に動く
-    for (int x = 0; x < (int)Width - 100; x += 10) {
-        // 背景を黒でクリア
-        for (UINT32 y = 0; y < Height; y++) {
-            for (UINT32 xx = 0; xx < Width; xx++) {
-                FB[y * Pitch + xx] = 0x000000; // 黒
-            }
-        }
-
-        // 四角を描画
-        for (UINT32 y = 100; y < 200; y++) {
-            for (UINT32 xx = x; xx < x + 100; xx++) {
-                FB[y * Pitch + xx] = 0xFF0000; // 赤
-            }
-        }
-
-        // 少し待つ
-        gBS->Stall(50000); // 0.05秒
+    // LoadedImage を取得
+    Status = gBS->HandleProtocol(
+        ImageHandle,
+        &gEfiLoadedImageProtocolGuid,
+        (VOID**)&LoadedImage
+    );
+    if (EFI_ERROR(Status)) {
+        Print(L"LoadedImage not found!\n");
+        return Status;
     }
 
-    // 終了待ち（キー入力待ち）
+    // SimpleFS を取得
+    Status = gBS->HandleProtocol(
+        LoadedImage->DeviceHandle,
+        &gEfiSimpleFileSystemProtocolGuid,
+        (VOID**)&SimpleFs
+    );
+    if (EFI_ERROR(Status)) {
+        Print(L"SimpleFS not found!\n");
+        return Status;
+    }
+
+    // ルートディレクトリを開く
+    Status = SimpleFs->OpenVolume(SimpleFs, &Root);
+    if (EFI_ERROR(Status)) {
+        Print(L"OpenVolume failed!\n");
+        return Status;
+    }
+
+    // test.txt を開く
+    Status = Root->Open(
+        Root,
+        &File,
+        L"test.txt",
+        EFI_FILE_MODE_READ,
+        0
+    );
+    if (EFI_ERROR(Status)) {
+        Print(L"Open test.txt failed!\n");
+        return Status;
+    }
+
+    // ファイルサイズを取得
+    EFI_FILE_INFO *FileInfo;
+    UINTN FileInfoSize = sizeof(EFI_FILE_INFO) + 200;
+    FileInfo = AllocateZeroPool(FileInfoSize);
+
+    Status = File->GetInfo(File, &gEfiFileInfoGuid, &FileInfoSize, FileInfo);
+    if (EFI_ERROR(Status)) {
+        Print(L"GetInfo failed!\n");
+        return Status;
+    }
+
+    UINTN FileSize = FileInfo->FileSize;
+    FreePool(FileInfo);
+
+    // バッファ確保して読み込み
+    CHAR8 *Buffer = AllocateZeroPool(FileSize + 1);
+    Status = File->Read(File, &FileSize, Buffer);
+    if (EFI_ERROR(Status)) {
+        Print(L"Read failed!\n");
+        return Status;
+    }
+
+    // ASCII → Unicode に変換して表示
+    CHAR16 *UnicodeBuf = AllocateZeroPool((FileSize + 1) * sizeof(CHAR16));
+    for (UINTN i = 0; i < FileSize; i++) {
+        UnicodeBuf[i] = (CHAR16)Buffer[i];
+    }
+    Print(L"Contents of test.txt: %s\n", UnicodeBuf);
+
+    // 後処理
+    FreePool(Buffer);
+    FreePool(UnicodeBuf);
+    File->Close(File);
+
+    // キー入力待ち
+    Print(L"Press any key to exit...\n");
     EFI_INPUT_KEY Key;
     UINTN EventIndex;
-    gST->ConIn->Reset(gST->ConIn, FALSE);
     gBS->WaitForEvent(1, &gST->ConIn->WaitForKey, &EventIndex);
     gST->ConIn->ReadKeyStroke(gST->ConIn, &Key);
 

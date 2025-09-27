@@ -33,6 +33,10 @@
   FileHandleLib             | MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
   ShellLib                  | ShellPkg/Library/UefiShellLib/UefiShellLib.inf
   
+  DevicePathLib     | MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+  FileHandleLib     | MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
+
+  
 
 
 

@@ -15,9 +15,16 @@
 [LibraryClasses]
   UefiLib
   UefiApplicationEntryPoint
-  StackCheckLib
-  StackCheckFailureHookLib
-　UefiBootServicesTableLib
-  BaseMemoryLib
+  UefiBootServicesTableLib
   MemoryAllocationLib
+  BaseMemoryLib
+  PrintLib
+
+[Protocols]
+  gEfiSimpleFileSystemProtocolGuid
+  gEfiLoadedImageProtocolGuid
+  gEfiGraphicsOutputProtocolGuid
+
+[Guids]
+  gEfiFileInfoGuid
 
