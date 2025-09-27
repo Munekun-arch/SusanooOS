@@ -3,37 +3,6 @@
 #include <Library/UefiBootServicesTableLib.h>
 #include <Protocol/GraphicsOutput.h>
 
-//
-// ピクセル描画
-//
-VOID PutPixel(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINTN X, UINTN Y, UINT32 Color) {
-    EFI_GRAPHICS_OUTPUT_BLT_PIXEL *Base =
-        (EFI_GRAPHICS_OUTPUT_BLT_PIXEL*)Gop->Mode->FrameBufferBase;
-    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
-    EFI_GRAPHICS_OUTPUT_BLT_PIXEL *Pixel = Base + Y * Pitch + X;
-    Pixel->Red   = (Color >> 16) & 0xFF;
-    Pixel->Green = (Color >> 8) & 0xFF;
-    Pixel->Blue  = (Color) & 0xFF;
-}
-
-//
-// 線描画（ブレゼンハム法）
-//
-VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN x0, INTN y0, INTN x1, INTN y1, UINT32 Color) {
-    INTN dx = (x1 > x0) ? (x1 - x0) : (x0 - x1);
-    INTN sx = (x0 < x1) ? 1 : -1;
-    INTN dy = (y1 > y0) ? (y0 - y1) : (y1 - y0);
-    INTN sy = (y0 < y1) ? 1 : -1;
-    INTN err = dx + dy;
-    while (TRUE) {
-        PutPixel(Gop, x0, y0, Color);
-        if (x0 == x1 && y0 == y1) break;
-        INTN e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x0 += sx; }
-        if (e2 <= dx) { err += dx; y0 += sy; }
-    }
-}
-
 EFI_STATUS
 EFIAPI
 UefiMain (
@@ -41,37 +10,44 @@ UefiMain (
   IN EFI_SYSTEM_TABLE *SystemTable
   )
 {
-    EFI_STATUS Status;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop;
+    EFI_STATUS Status;
 
-    // GOP を取得
+    // GOP 取得
     Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&Gop);
     if (EFI_ERROR(Status)) {
-        Print(L"Failed to locate GOP\n");
+        Print(L"Unable to locate GOP\n");
         return Status;
     }
 
-    // 背景を黒で塗りつぶす
-    for (UINTN y = 0; y < Gop->Mode->Info->VerticalResolution; y++) {
-        for (UINTN x = 0; x < Gop->Mode->Info->HorizontalResolution; x++) {
-            PutPixel(Gop, x, y, 0x000000); // 黒
+    UINT32 Width  = Gop->Mode->Info->HorizontalResolution;
+    UINT32 Height = Gop->Mode->Info->VerticalResolution;
+    UINT32 *FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+
+    // 横方向グラデーション (赤→青)
+    for (UINT32 y = 0; y < Height; y++) {
+        for (UINT32 x = 0; x < Width; x++) {
+            UINT8 ratio = (x * 255) / Width;
+            UINT8 r = 255 - ratio;
+            UINT8 g = 0;
+            UINT8 b = ratio;
+            UINT32 color = (r << 16) | (g << 8) | b;
+            FrameBuffer[y * (Gop->Mode->Info->PixelsPerScanLine) + x] = color;
         }
     }
 
-    // テストで線を描く
-    DrawLine(Gop, 100, 100, 400, 100, 0xFF0000); // 赤 横線
-    DrawLine(Gop, 100, 100, 100, 300, 0x00FF00); // 緑 縦線
-    DrawLine(Gop, 100, 100, 400, 300, 0x0000FF); // 青 斜め線
+    Print(L"Gradient Drawn! Press any key to exit...\n");
 
-	Print(L"線描画テスト 完了。キーを押すと終了。\n");
-	SystemTable->ConIn->Reset(SystemTable->ConIn, FALSE);
+    // 🔽 ここで待機する
+    EFI_INPUT_KEY Key;
+    SystemTable->ConIn->Reset(SystemTable->ConIn, FALSE);
+    while (TRUE) {
+        Status = SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &Key);
+        if (!EFI_ERROR(Status)) {
+            break;  // 何かキーが押されたら抜ける
+        }
+    }
 
-	EFI_INPUT_KEY Key;
-	while (SystemTable->ConIn->ReadKeyStroke(SystemTable->ConIn, &Key) == EFI_NOT_READY) {
-		gBS->Stall(100000); // 100ms待機
-	}
-
-	return EFI_SUCCESS;
-
+    return EFI_SUCCESS;
 }
 

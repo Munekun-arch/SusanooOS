@@ -18,5 +18,6 @@
   StackCheckLib
   StackCheckFailureHookLib
 　UefiBootServicesTableLib
+  BaseMemoryLib
   MemoryAllocationLib
 
