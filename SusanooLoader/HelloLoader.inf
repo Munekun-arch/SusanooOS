@@ -8,6 +8,8 @@
 
 [Sources]
   HelloLoader.c
+  BmpLoader.c
+
 
 [Packages]
   MdePkg/MdePkg.dec
