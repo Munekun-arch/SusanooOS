@@ -73,11 +73,11 @@ UefiMain (
         return Status;
     }
 
-    // BMP ファイルを開く
+    // BMP を開く
     Status = Root->Open(
         Root,
         &File,
-        L"\\EFI\\BOOT\\test.bmp",
+        L"test.bmp",  // ルート直下に置いた BMP を想定
         EFI_FILE_MODE_READ,
         0
     );
@@ -110,10 +110,8 @@ UefiMain (
     // ピクセルデータへシーク
     File->SetPosition(File, FileHeader.bfOffBits);
 
-    // 行サイズ（4バイト境界揃え）
-    UINTN RowSize = ((InfoHeader.biBitCount * InfoHeader.biWidth + 31) / 32) * 4;
-    UINTN PixelBytes = RowSize * InfoHeader.biHeight;
-
+    // ピクセル読み込み（32bit BMP 前提）
+    UINTN PixelBytes = InfoHeader.biWidth * InfoHeader.biHeight * 4;
     UINT8 *PixelData = AllocateZeroPool(PixelBytes);
     File->Read(File, &PixelBytes, PixelData);
 
@@ -125,29 +123,37 @@ UefiMain (
         return Status;
     }
 
-    UINT32 *FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+    // FrameBuffer, Pitch, 解像度を取得
+    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
     UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
+    UINTN Width = Gop->Mode->Info->HorizontalResolution;
+    UINTN Height = Gop->Mode->Info->VerticalResolution;
 
-    // 描画ループ
-    for (INT32 y = 0; y < InfoHeader.biHeight; y++) {
-        UINT8 *Row = PixelData + (RowSize * y);
-        for (INT32 x = 0; x < InfoHeader.biWidth; x++) {
-            UINT8 *Src = &Row[x * (InfoHeader.biBitCount / 8)];
-            UINT32 Color;
-
-            if (InfoHeader.biBitCount == 24) {
-                Color = (Src[2] << 16) | (Src[1] << 8) | Src[0];
-            } else if (InfoHeader.biBitCount == 32) {
-                Color = (Src[2] << 16) | (Src[1] << 8) | Src[0]; // alpha無視
-            } else {
-                continue;
-            }
-
-            // BMP は bottom-up 格納なので上下反転
-            INT32 DrawY = (InfoHeader.biHeight - 1 - y);
-            FrameBuffer[(100 + DrawY) * Pitch + (100 + x)] = Color;
+    // === 画面を黒でクリア ===
+    for (UINTN y = 0; y < Height; y++) {
+        for (UINTN x = 0; x < Width; x++) {
+            FrameBuffer[y * Pitch + x] = 0x000000; // 黒
         }
     }
+
+    // === BMP を描画 ===
+	for (INT32 y = 0; y < InfoHeader.biHeight; y++) {
+    for (INT32 x = 0; x < InfoHeader.biWidth; x++) {
+        UINT32 Color;
+        if (InfoHeader.biBitCount == 24) {
+            UINT8* Src = &PixelData[(y * InfoHeader.biWidth + x) * 3];
+            Color = (Src[2] << 16) | (Src[1] << 8) | (Src[0]); // BGR→RGB
+        } else if (InfoHeader.biBitCount == 32) {
+            UINT8* Src = &PixelData[(y * InfoHeader.biWidth + x) * 4];
+            Color = (Src[2] << 16) | (Src[1] << 8) | (Src[0]); // BGRAの下位3byte
+        } else {
+            Color = 0xFFFFFF; // 未対応ビット深度は白
+        }
+
+        FrameBuffer[(100 + (InfoHeader.biHeight - 1 - y)) * Pitch + (100 + x)] = Color;
+    }
+}
+
 
     FreePool(PixelData);
     File->Close(File);
