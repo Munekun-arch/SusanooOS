@@ -2,10 +2,34 @@
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/BaseMemoryLib.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/LoadedImage.h>
+#include <Protocol/GraphicsOutput.h>
 #include <Guid/FileInfo.h>
+
+#pragma pack(1)
+typedef struct {
+    UINT16 bfType;
+    UINT32 bfSize;
+    UINT16 bfReserved1;
+    UINT16 bfReserved2;
+    UINT32 bfOffBits;
+} BMP_FILE_HEADER;
+
+typedef struct {
+    UINT32 biSize;
+    INT32  biWidth;
+    INT32  biHeight;
+    UINT16 biPlanes;
+    UINT16 biBitCount;
+    UINT32 biCompression;
+    UINT32 biSizeImage;
+    INT32  biXPelsPerMeter;
+    INT32  biYPelsPerMeter;
+    UINT32 biClrUsed;
+    UINT32 biClrImportant;
+} BMP_INFO_HEADER;
+#pragma pack()
 
 EFI_STATUS
 EFIAPI
@@ -18,85 +42,87 @@ UefiMain (
     EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *SimpleFs;
     EFI_FILE_PROTOCOL *Root, *File;
+    EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop;
 
-    // LoadedImage を取得
-    Status = gBS->HandleProtocol(
-        ImageHandle,
-        &gEfiLoadedImageProtocolGuid,
-        (VOID**)&LoadedImage
-    );
+    // Graphics Output Protocol
+    Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&Gop);
     if (EFI_ERROR(Status)) {
-        Print(L"LoadedImage not found!\n");
+        Print(L"GOP not found!\n");
         return Status;
     }
 
-    // SimpleFS を取得
-    Status = gBS->HandleProtocol(
-        LoadedImage->DeviceHandle,
-        &gEfiSimpleFileSystemProtocolGuid,
-        (VOID**)&SimpleFs
-    );
-    if (EFI_ERROR(Status)) {
-        Print(L"SimpleFS not found!\n");
-        return Status;
-    }
+    // LoadedImage
+    Status = gBS->HandleProtocol(ImageHandle, &gEfiLoadedImageProtocolGuid, (VOID**)&LoadedImage);
+    if (EFI_ERROR(Status)) return Status;
 
-    // ルートディレクトリを開く
+    // SimpleFS
+    Status = gBS->HandleProtocol(LoadedImage->DeviceHandle, &gEfiSimpleFileSystemProtocolGuid, (VOID**)&SimpleFs);
+    if (EFI_ERROR(Status)) return Status;
+
     Status = SimpleFs->OpenVolume(SimpleFs, &Root);
-    if (EFI_ERROR(Status)) {
-        Print(L"OpenVolume failed!\n");
-        return Status;
-    }
+    if (EFI_ERROR(Status)) return Status;
 
-    // test.txt を開く
+    // BMP ファイルを開く
     Status = Root->Open(
-        Root,
-        &File,
-        L"test.txt",
-        EFI_FILE_MODE_READ,
-        0
-    );
+    Root,
+    &File,
+    L"EFI\\BOOT\\test.bmp",
+    EFI_FILE_MODE_READ,
+    0
+	);
     if (EFI_ERROR(Status)) {
-        Print(L"Open test.txt failed!\n");
+        Print(L"Open test.bmp failed!\n");
         return Status;
     }
 
-    // ファイルサイズを取得
+    // ファイルサイズ取得
     EFI_FILE_INFO *FileInfo;
     UINTN FileInfoSize = sizeof(EFI_FILE_INFO) + 200;
     FileInfo = AllocateZeroPool(FileInfoSize);
-
     Status = File->GetInfo(File, &gEfiFileInfoGuid, &FileInfoSize, FileInfo);
-    if (EFI_ERROR(Status)) {
-        Print(L"GetInfo failed!\n");
-        return Status;
-    }
-
     UINTN FileSize = FileInfo->FileSize;
     FreePool(FileInfo);
 
-    // バッファ確保して読み込み
-    CHAR8 *Buffer = AllocateZeroPool(FileSize + 1);
+    // 読み込み
+    UINT8 *Buffer = AllocateZeroPool(FileSize);
     Status = File->Read(File, &FileSize, Buffer);
     if (EFI_ERROR(Status)) {
-        Print(L"Read failed!\n");
+        Print(L"Read BMP failed!\n");
         return Status;
     }
-
-    // ASCII → Unicode に変換して表示
-    CHAR16 *UnicodeBuf = AllocateZeroPool((FileSize + 1) * sizeof(CHAR16));
-    for (UINTN i = 0; i < FileSize; i++) {
-        UnicodeBuf[i] = (CHAR16)Buffer[i];
-    }
-    Print(L"Contents of test.txt: %s\n", UnicodeBuf);
-
-    // 後処理
-    FreePool(Buffer);
-    FreePool(UnicodeBuf);
     File->Close(File);
 
+    // ヘッダ取得
+    BMP_FILE_HEADER *FileHdr = (BMP_FILE_HEADER*)Buffer;
+    BMP_INFO_HEADER *InfoHdr = (BMP_INFO_HEADER*)(Buffer + sizeof(BMP_FILE_HEADER));
+
+    if (FileHdr->bfType != 0x4D42) {
+        Print(L"Not a BMP file!\n");
+        return EFI_ABORTED;
+    }
+
+    UINT8 *PixelData = Buffer + FileHdr->bfOffBits;
+    INT32 Width = InfoHdr->biWidth;
+    INT32 Height = InfoHdr->biHeight;
+    UINT16 BitCount = InfoHdr->biBitCount;
+
+    Print(L"BMP: %dx%d %dbit\n", Width, Height, BitCount);
+
+    // 描画 (24bit RGB想定)
+    for (INT32 y = 0; y < Height; y++) {
+        for (INT32 x = 0; x < Width; x++) {
+            UINT8 *Pixel = PixelData + (y * Width + x) * 3;
+            UINT32 Color = (Pixel[2] << 16) | (Pixel[1] << 8) | Pixel[0]; // BGR→RGB
+
+            UINT32 *FbBase = (UINT32*)Gop->Mode->FrameBufferBase;
+            UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
+            FbBase[(Height - 1 - y) * Pitch + x] = Color; // 上下反転
+        }
+    }
+
+    Print(L"BMP drawn!\n");
+
     // キー入力待ち
-    Print(L"Press any key to exit...\n");
     EFI_INPUT_KEY Key;
     UINTN EventIndex;
     gBS->WaitForEvent(1, &gST->ConIn->WaitForKey, &EventIndex);
