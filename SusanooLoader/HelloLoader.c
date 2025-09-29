@@ -46,13 +46,11 @@ UefiMain (
         return Status;
     }
 
-    //
-    // 複数 BMP を表示
-    //
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\test.bmp",  0,  50);
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\red32.bmp", 50,  100);
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\blue32.bmp", 150, 100);
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\green32.bmp",250, 100);
+    // 複数のBMPを描画するテスト
+	LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\red32.bmp",   100, 100);
+	LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\green32.bmp", 150, 100);
+	LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\blue32.bmp",  200, 100);
+	LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\test.bmp",    250, 100);
 
     // キー入力待ち
     Print(L"Press any key to exit...\n");
