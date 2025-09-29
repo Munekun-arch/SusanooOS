@@ -4,12 +4,13 @@
 #include <Uefi.h>
 #include <Protocol/SimpleFileSystem.h>
 
+// BMP を読み込み、指定座標に描画する
 EFI_STATUS
 LoadBmpAndDraw(
     EFI_FILE_PROTOCOL *Root,
     CHAR16 *FileName,
-    INTN DestX,
-    INTN DestY
+    UINTN X,
+    UINTN Y
 );
 
 #endif
