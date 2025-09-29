@@ -8,6 +8,7 @@
 
 [Sources]
   HelloLoader.c
+  Graphics.c
   BmpLoader.c
 
 
