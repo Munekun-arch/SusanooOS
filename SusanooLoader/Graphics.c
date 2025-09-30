@@ -1,39 +1,43 @@
 #include "Graphics.h"
-#include <Library/BaseMemoryLib.h>
 #include <Library/UefiLib.h>
 
-VOID PutPixel(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, UINT32 Color) {
-    UINT32 *FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
-    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
-    FrameBuffer[Y * Pitch + X] = Color;
+VOID ClearScreen(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT32 Color) {
+    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN Pixels = Gop->Mode->Info->PixelsPerScanLine * Gop->Mode->Info->VerticalResolution;
+
+    for (UINTN i = 0; i < Pixels; i++) {
+        FrameBuffer[i] = Color;
+    }
 }
 
-VOID DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, INTN W, INTN H, UINT32 Color) {
-    for (INTN dy = 0; dy < H; dy++) {
-        for (INTN dx = 0; dx < W; dx++) {
-            PutPixel(Gop, X + dx, Y + dy, Color);
+VOID DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, UINTN W, UINTN H, UINT32 Color) {
+    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
+
+    for (UINTN dy = 0; dy < H; dy++) {
+        for (UINTN dx = 0; dx < W; dx++) {
+            FrameBuffer[(Y + dy) * Pitch + (X + dx)] = Color;
         }
     }
 }
 
-VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X0, INTN Y0, INTN X1, INTN Y1, UINT32 Color) {
-    INTN dx = (X1 > X0) ? (X1 - X0) : (X0 - X1);
-    INTN sx = (X0 < X1) ? 1 : -1;
-    INTN dy = (Y1 > Y0) ? (Y0 - Y1) : (Y1 - Y0);
-    INTN sy = (Y0 < Y1) ? 1 : -1;
-    INTN err = dx + dy;
+VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X1, INTN Y1, INTN X2, INTN Y2, UINT32 Color) {
+    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
 
-    while (1) {
-        PutPixel(Gop, X0, Y0, Color);
-        if (X0 == X1 && Y0 == Y1) break;
-        INTN e2 = 2 * err;
-        if (e2 >= dy) { err += dy; X0 += sx; }
-        if (e2 <= dx) { err += dx; Y0 += sy; }
+    if (Y1 == Y2) { // 横線
+        for (INTN x = X1; x <= X2; x++) {
+            FrameBuffer[Y1 * Pitch + x] = Color;
+        }
+    } else if (X1 == X2) { // 縦線
+        for (INTN y = Y1; y <= Y2; y++) {
+            FrameBuffer[y * Pitch + X1] = Color;
+        }
     }
 }
 
-VOID DrawText(EFI_SYSTEM_TABLE *SystemTable, CHAR16 *String, INTN X, INTN Y) {
-    // とりあえず座標は無視して Print を呼ぶだけ
-    Print(L"%s\n", String);
+VOID DrawText(INTN X, INTN Y, CHAR16 *Text) {
+    // テキストは Print() に任せる（座標制御は未対応）
+    Print(L"%s\n", Text);
 }
 
