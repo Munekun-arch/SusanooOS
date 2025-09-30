@@ -4,17 +4,17 @@
 #include <Uefi.h>
 #include <Protocol/GraphicsOutput.h>
 
-// 画面クリア
+// シンプルな RGB マクロ関数
+static inline
+UINT32 Rgb(UINT8 r, UINT8 g, UINT8 b) {
+    return (r << 16) | (g << 8) | b;
+}
+
+// 描画関数のプロトタイプ
 VOID ClearScreen(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT32 Color);
-
-// 矩形描画
-VOID DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, UINTN W, UINTN H, UINT32 Color);
-
-// ライン描画 (水平/垂直のみ)
+VOID DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, INTN W, INTN H, UINT32 Color);
 VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X1, INTN Y1, INTN X2, INTN Y2, UINT32 Color);
-
-// テキスト描画（位置指定）
-VOID DrawText(INTN X, INTN Y, CHAR16 *Text);
+VOID DrawTextXY(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, CHAR16 *Text, UINT32 Color);
 
 #endif
 

@@ -1,81 +1,80 @@
 #include <Uefi.h>
 #include <Library/UefiLib.h>
 #include <Library/UefiBootServicesTableLib.h>
-#include <Protocol/SimpleFileSystem.h>
-#include <Protocol/LoadedImage.h>
 #include <Protocol/GraphicsOutput.h>
-#include <Guid/FileInfo.h>
 
-#include "Graphics.h"
-#include "BmpLoader.h"
+// 8x16 フォントパターン (例: 'A')
+static const UINT8 Font_A[16] = {
+    0x18, //    XX
+    0x24, //   X  X
+    0x42, //  X    X
+    0x42, //  X    X
+    0x7E, //  XXXXXX
+    0x42, //  X    X
+    0x42, //  X    X
+    0x42, //  X    X
+    0x42, //  X    X
+    0x42, //  X    X
+    0x00, //
+    0x00, //
+    0x00, //
+    0x00, //
+    0x00, //
+    0x00  //
+};
+
+// ピクセルを描画
+STATIC
+VOID
+DrawPixel(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINTN X, UINTN Y, UINT32 Color) {
+    UINT32 *FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
+    FrameBuffer[Y * Pitch + X] = Color;
+}
+
+// 文字 'A' を描画
+STATIC
+VOID
+DrawCharA(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINTN X, UINTN Y, UINT32 Color) {
+    for (UINTN row = 0; row < 16; row++) {
+        UINT8 bits = Font_A[row];
+        for (UINTN col = 0; col < 8; col++) {
+            if (bits & (1 << (7 - col))) {
+                DrawPixel(Gop, X + col, Y + row, Color);
+            }
+        }
+    }
+}
 
 EFI_STATUS
 EFIAPI
-UefiMain (
-  IN EFI_HANDLE ImageHandle,
-  IN EFI_SYSTEM_TABLE *SystemTable
-  )
-{
-    EFI_STATUS Status;
-    EFI_LOADED_IMAGE_PROTOCOL *LoadedImage;
-    EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *SimpleFs;
-    EFI_FILE_PROTOCOL *Root;
-
-    // LoadedImage を取得
-    Status = gBS->HandleProtocol(
-        ImageHandle,
-        &gEfiLoadedImageProtocolGuid,
-        (VOID**)&LoadedImage
-    );
-    if (EFI_ERROR(Status)) {
-        Print(L"LoadedImage not found!\n");
-        return Status;
-    }
-
-    // SimpleFS を取得
-    Status = gBS->HandleProtocol(
-        LoadedImage->DeviceHandle,
-        &gEfiSimpleFileSystemProtocolGuid,
-        (VOID**)&SimpleFs
-    );
-    if (EFI_ERROR(Status)) {
-        Print(L"SimpleFS not found!\n");
-        return Status;
-    }
-
-    // ルートディレクトリを開く
-    Status = SimpleFs->OpenVolume(SimpleFs, &Root);
-    if (EFI_ERROR(Status)) {
-        Print(L"OpenVolume failed!\n");
-        return Status;
-    }
-
-    // GOP 取得
+UefiMain(IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop;
+    EFI_STATUS Status;
+
+    // GOP を取得
     Status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID**)&Gop);
     if (EFI_ERROR(Status)) {
         Print(L"GOP not found!\n");
         return Status;
     }
 
-    // 背景クリア（赤）
-    ClearScreen(Gop, 0x000000FF);
+    // 背景を黒で塗る
+    UINT32 *FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
+    UINTN Width = Gop->Mode->Info->HorizontalResolution;
+    UINTN Height = Gop->Mode->Info->VerticalResolution;
 
-    // 基本図形
-    DrawRect(Gop, 50, 50, 100, 100, 0x00FF00);     // 緑の矩形
-    DrawLine(Gop, 200, 200, 400, 200, 0xFFFFFF);   // 白い水平ライン
-    DrawLine(Gop, 200, 200, 200, 400, 0xFFFFFF);   // 白い垂直ライン
+    for (UINTN y = 0; y < Height; y++) {
+        for (UINTN x = 0; x < Width; x++) {
+            FrameBuffer[y * Pitch + x] = 0x000000; // 黒
+        }
+    }
 
-    // BMP を複数描画
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\red32.bmp",   100, 300);
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\green32.bmp", 150, 300);
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\blue32.bmp",  200, 300);
-    LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\test.bmp",    250, 300);
+    // 文字 'A' を描画
+    DrawCharA(Gop, 100, 100, 0xFFFFFF); // 白色の 'A'
 
-    // テキスト出力
-    DrawText(0, 0, L"Susanoo OS Graphics Test");
-
-    // 終了待ち
+    // キー入力待ち
     Print(L"Press any key to exit...\n");
     EFI_INPUT_KEY Key;
     UINTN EventIndex;
