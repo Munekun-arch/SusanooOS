@@ -1,89 +1,95 @@
 #include "Graphics.h"
+#include <Library/BaseMemoryLib.h>
 
-// A/Bだけのフォント
-STATIC CONST UINT8 Font8x16[2][16] = {
-    {0x18,0x3C,0x66,0x66,0x7E,0x66,0x66,0x00,0,0,0,0,0,0,0,0}, // 'A'
-    {0x7C,0x66,0x66,0x7C,0x66,0x66,0x7C,0x00,0,0,0,0,0,0,0,0}  // 'B'
-};
+VOID ClearScreen(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT32 color) {
+    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
+    UINTN width = Gop->Mode->Info->HorizontalResolution;
+    UINTN height = Gop->Mode->Info->VerticalResolution;
 
-// 背景クリア
-#include "Graphics.h"
-
-VOID ClearScreen(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT32 Color) {
-    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
-    UINTN Width = Gop->Mode->Info->HorizontalResolution;
-    UINTN Height = Gop->Mode->Info->VerticalResolution;
-    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
-
-    for (UINTN y = 0; y < Height; y++) {
-        for (UINTN x = 0; x < Width; x++) {
-            FrameBuffer[y * Pitch + x] = Color;
+    for (UINTN y = 0; y < height; y++) {
+        for (UINTN x = 0; x < width; x++) {
+            fb[y * pitch + x] = color;
         }
     }
 }
 
+VOID DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
+              INTN x, INTN y, INTN w, INTN h, UINT32 color) {
+    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
 
-// 矩形
-VOID
-DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-         INTN X, INTN Y, INTN Width, INTN Height, UINT32 Color) {
-    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
-    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
-
-    for (INTN y = 0; y < Height; y++) {
-        for (INTN x = 0; x < Width; x++) {
-            FrameBuffer[(Y + y) * Pitch + (X + x)] = Color;
+    for (INTN j = 0; j < h; j++) {
+        for (INTN i = 0; i < w; i++) {
+            fb[(y + j) * pitch + (x + i)] = color;
         }
     }
 }
 
-// ライン（水平/垂直のみ）
-VOID
-DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-         INTN X1, INTN Y1, INTN X2, INTN Y2, UINT32 Color) {
-    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
-    UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
+VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
+              INTN x0, INTN y0, INTN x1, INTN y1, UINT32 color) {
+    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
 
-    if (Y1 == Y2) {
-        for (INTN x = X1; x <= X2; x++) {
-            FrameBuffer[Y1 * Pitch + x] = Color;
-        }
-    } else if (X1 == X2) {
-        for (INTN y = Y1; y <= Y2; y++) {
-            FrameBuffer[y * Pitch + X1] = Color;
-        }
+    INTN dx = (x1 > x0) ? (x1 - x0) : (x0 - x1);
+    INTN sx = (x0 < x1) ? 1 : -1;
+    INTN dy = (y1 > y0) ? (y1 - y0) : (y0 - y1);
+    INTN sy = (y0 < y1) ? 1 : -1;
+    INTN err = ((dx > dy) ? dx : -dy) / 2;
+
+    while (TRUE) {
+        fb[y0 * pitch + x0] = color;
+        if (x0 == x1 && y0 == y1) break;
+        INTN e2 = err;
+        if (e2 > -dx) { err -= dy; x0 += sx; }
+        if (e2 < dy)  { err += dx; y0 += sy; }
     }
 }
 
-// 内部文字描画
-STATIC
-VOID
-DrawChar(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-         INTN X, INTN Y, CHAR16 Ch, UINT32 Color) {
-    if (Ch < L'A' || Ch > L'B') return;
-    CONST UINT8 *Glyph = Font8x16[Ch - L'A'];
+VOID PutPixel(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN x, INTN y, UINT32 color) {
     UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
     UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
-
-    for (INTN row = 0; row < 16; row++) {
-        UINT8 Bits = Glyph[row];
-        for (INTN col = 0; col < 8; col++) {
-            if (Bits & (1 << (7 - col))) {
-                FrameBuffer[(Y + row) * Pitch + (X + col)] = Color;
-            }
-        }
-    }
+    FrameBuffer[y * Pitch + x] = color;
 }
 
-// テキスト
-VOID
-DrawTextXY(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-           INTN X, INTN Y, CHAR16 *String, UINT32 Color) {
-    INTN CursorX = X;
-    while (*String) {
-        DrawChar(Gop, CursorX, Y, *String, Color);
-        CursorX += 8;
-        String++;
-    }
-}
+//VOID DrawChar(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
+//              INTN x, INTN y,
+//              CHAR16 ch,
+//              UINT32 fg, UINT32 bg,
+//              BOOLEAN transparent) {
+//    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
+//    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
+
+    // 仮: 8x8 の四角を「文字」として描画
+//    for (INTN j = 0; j < 8; j++) {
+//        for (INTN i = 0; i < 8; i++) {
+//            if (transparent) {
+//                if (i == 0 || j == 0 || i == 7 || j == 7) {
+//                    fb[(y + j) * pitch + (x + i)] = fg;
+//                }
+//            } else {
+//                fb[(y + j) * pitch + (x + i)] = (i == 0 || j == 0 || i == 7 || j == 7) ? fg : bg;
+//            }
+//        }
+//    }
+//}
+
+//VOID DrawString(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
+//                INTN x, INTN y,
+//                const CHAR16 *Str,
+//                UINT32 Fg, UINT32 Bg,
+//                BOOLEAN Transparent)
+//{
+//    while (*Str) {   // ← str → Str に修正
+//        if (*Str == L'\n') {
+//            y += 16;   // フォント高さ
+//            x = 0;
+//        } else {
+//            DrawChar(Gop, x, y, *Str, Fg, Bg, Transparent);
+//            x += 8;    // フォント幅
+//        }
+//        Str++;
+//    }
+//}
+
 

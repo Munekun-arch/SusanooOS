@@ -10,6 +10,7 @@
   HelloLoader.c
   BmpLoader.c
   Graphics.c
+  Text.c
 
 [Packages]
   MdePkg/MdePkg.dec
