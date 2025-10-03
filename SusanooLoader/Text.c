@@ -1,44 +1,52 @@
 #include "Text.h"
 #include "Graphics.h"
-#include "Font8x16.h"   // 8x16フォントビットマップを仮定
+#include "Font8x16.h"
 
-// 1文字描画
+#define FONT_WIDTH  8
+#define FONT_HEIGHT 16
+
 VOID DrawChar(
     EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-    INTN X, INTN Y,
+    INTN X,
+    INTN Y,
     CHAR16 Ch,
-    UINT32 FgRgb, UINT32 BgRgb,
-    BOOLEAN TransparentBg
+    UINT32 FgColor,
+    UINT32 BgColor,
+    BOOLEAN Transparent
 ) {
-    const UINT8 *glyph = LookupGlyph(Ch);  // Font8x16から取得
+    if (Ch < 32 || Ch > 127) return;
+    CONST UINT8 *glyph = Font8x16[Ch - 32];
 
     for (INTN yy = 0; yy < FONT_HEIGHT; yy++) {
-        UINT8 row = glyph[yy];
+        UINT8 line = glyph[yy];
         for (INTN xx = 0; xx < FONT_WIDTH; xx++) {
-            if (row & (0x80 >> xx)) {
-                PutPixel(Gop, X + xx, Y + yy, FgRgb);
-            } else if (!TransparentBg) {
-                PutPixel(Gop, X + xx, Y + yy, BgRgb);
+            if (line & (1 << (7 - xx))) {
+                PutPixel(Gop, X + xx, Y + yy, FgColor);
+            } else if (!Transparent) {
+                PutPixel(Gop, X + xx, Y + yy, BgColor);
             }
         }
     }
 }
 
-// 文字列描画
 VOID DrawString(
     EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-    INTN X, INTN Y,
-    const CHAR16 *Str,
-    UINT32 FgRgb, UINT32 BgRgb,
-    BOOLEAN TransparentBg
+    INTN X,
+    INTN Y,
+    CONST CHAR16 *Str,
+    UINT32 FgColor,
+    UINT32 BgColor,
+    BOOLEAN Transparent
 ) {
     INTN cx = X;
+    INTN cy = Y;
+
     for (UINTN i = 0; Str[i] != 0; i++) {
         if (Str[i] == L'\n') {
             cx = X;
-            Y += FONT_HEIGHT;
+            cy += FONT_HEIGHT;
         } else {
-            DrawChar(Gop, cx, Y, Str[i], FgRgb, BgRgb, TransparentBg);
+            DrawChar(Gop, cx, cy, Str[i], FgColor, BgColor, Transparent);
             cx += FONT_WIDTH;
         }
     }

@@ -1,95 +1,55 @@
 #include "Graphics.h"
-#include <Library/BaseMemoryLib.h>
 
-VOID ClearScreen(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT32 color) {
-    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
-    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
-    UINTN width = Gop->Mode->Info->HorizontalResolution;
-    UINTN height = Gop->Mode->Info->VerticalResolution;
-
-    for (UINTN y = 0; y < height; y++) {
-        for (UINTN x = 0; x < width; x++) {
-            fb[y * pitch + x] = color;
-        }
+VOID PutPixel(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, UINT32 Color) {
+    if (X < 0 || Y < 0) return;
+    if ((UINTN)X >= Gop->Mode->Info->HorizontalResolution ||
+        (UINTN)Y >= Gop->Mode->Info->VerticalResolution) {
+        return;
     }
-}
 
-VOID DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-              INTN x, INTN y, INTN w, INTN h, UINT32 color) {
-    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
-    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
-
-    for (INTN j = 0; j < h; j++) {
-        for (INTN i = 0; i < w; i++) {
-            fb[(y + j) * pitch + (x + i)] = color;
-        }
-    }
-}
-
-VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-              INTN x0, INTN y0, INTN x1, INTN y1, UINT32 color) {
-    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
-    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
-
-    INTN dx = (x1 > x0) ? (x1 - x0) : (x0 - x1);
-    INTN sx = (x0 < x1) ? 1 : -1;
-    INTN dy = (y1 > y0) ? (y1 - y0) : (y0 - y1);
-    INTN sy = (y0 < y1) ? 1 : -1;
-    INTN err = ((dx > dy) ? dx : -dy) / 2;
-
-    while (TRUE) {
-        fb[y0 * pitch + x0] = color;
-        if (x0 == x1 && y0 == y1) break;
-        INTN e2 = err;
-        if (e2 > -dx) { err -= dy; x0 += sx; }
-        if (e2 < dy)  { err += dx; y0 += sy; }
-    }
-}
-
-VOID PutPixel(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN x, INTN y, UINT32 color) {
-    UINT32* FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
+    UINT32 *FrameBuffer = (UINT32*)Gop->Mode->FrameBufferBase;
     UINTN Pitch = Gop->Mode->Info->PixelsPerScanLine;
-    FrameBuffer[y * Pitch + x] = color;
+    FrameBuffer[Y * Pitch + X] = Color;
 }
 
-//VOID DrawChar(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-//              INTN x, INTN y,
-//              CHAR16 ch,
-//              UINT32 fg, UINT32 bg,
-//              BOOLEAN transparent) {
-//    UINT32* fb = (UINT32*)Gop->Mode->FrameBufferBase;
-//    UINTN pitch = Gop->Mode->Info->PixelsPerScanLine;
+VOID ClearScreen(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, UINT32 Color) {
+    UINTN Width  = Gop->Mode->Info->HorizontalResolution;
+    UINTN Height = Gop->Mode->Info->VerticalResolution;
 
-    // 仮: 8x8 の四角を「文字」として描画
-//    for (INTN j = 0; j < 8; j++) {
-//        for (INTN i = 0; i < 8; i++) {
-//            if (transparent) {
-//                if (i == 0 || j == 0 || i == 7 || j == 7) {
-//                    fb[(y + j) * pitch + (x + i)] = fg;
-//                }
-//            } else {
-//                fb[(y + j) * pitch + (x + i)] = (i == 0 || j == 0 || i == 7 || j == 7) ? fg : bg;
-//            }
-//        }
-//    }
-//}
+    for (UINTN y = 0; y < Height; y++) {
+        for (UINTN x = 0; x < Width; x++) {
+            PutPixel(Gop, x, y, Color);
+        }
+    }
+}
 
-//VOID DrawString(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
-//                INTN x, INTN y,
-//                const CHAR16 *Str,
-//                UINT32 Fg, UINT32 Bg,
-//                BOOLEAN Transparent)
-//{
-//    while (*Str) {   // ← str → Str に修正
-//        if (*Str == L'\n') {
-//            y += 16;   // フォント高さ
-//            x = 0;
-//        } else {
-//            DrawChar(Gop, x, y, *Str, Fg, Bg, Transparent);
-//            x += 8;    // フォント幅
-//        }
-//        Str++;
-//    }
-//}
+VOID DrawRect(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, INTN W, INTN H, UINT32 Color) {
+    for (INTN yy = 0; yy < H; yy++) {
+        for (INTN xx = 0; xx < W; xx++) {
+            PutPixel(Gop, X + xx, Y + yy, Color);
+        }
+    }
+}
 
+VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X0, INTN Y0, INTN X1, INTN Y1, UINT32 Color) {
+    INTN dx = (X1 > X0) ? (X1 - X0) : (X0 - X1);
+    INTN sx = (X0 < X1) ? 1 : -1;
+    INTN dy = (Y1 > Y0) ? (Y0 - Y1) : (Y1 - Y0);
+    INTN sy = (Y0 < Y1) ? 1 : -1;
+    INTN err = dx + dy;
+
+    while (1) {
+        PutPixel(Gop, X0, Y0, Color);
+        if (X0 == X1 && Y0 == Y1) break;
+        INTN e2 = 2 * err;
+        if (e2 >= dy) {
+            err += dy;
+            X0 += sx;
+        }
+        if (e2 <= dx) {
+            err += dx;
+            Y0 += sy;
+        }
+    }
+}
 

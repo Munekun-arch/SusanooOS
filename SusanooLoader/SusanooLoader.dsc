@@ -41,7 +41,7 @@
 
 
 [Components]
-  HelloLoader.inf
+  ../SusanooLoader/HelloLoader.inf
 
 
 
