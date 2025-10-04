@@ -12,6 +12,29 @@
 #include "BmpLoader.h"
 #include "Text.h"
 
+void EventLoop(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop) {
+    EFI_INPUT_KEY Key;
+    EFI_STATUS Status;
+    UINTN EventIndex;
+
+    Print(L"Event loop started. Press ESC to exit.\n");
+
+    while (TRUE) {
+        // 1. キー入力イベント待機
+        gBS->WaitForEvent(1, &gST->ConIn->WaitForKey, &EventIndex);
+        Status = gST->ConIn->ReadKeyStroke(gST->ConIn, &Key);
+        if (EFI_ERROR(Status)) continue;
+
+        // 2. キーの種類で分岐
+        if (Key.ScanCode == SCAN_ESC) {
+            Print(L"ESC pressed. Exiting event loop.\n");
+            break;
+        } else if (Key.UnicodeChar != 0) {
+            Print(L"Key pressed: %c\n", Key.UnicodeChar);
+        }
+    }
+}
+
 EFI_STATUS
 EFIAPI
 UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
@@ -64,13 +87,11 @@ UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     // ⑥ 下部にテキスト描画（黄文字）
     INTN textY = baseY + 100;
     DrawString(Gop, 40, textY, L"Hello, Susanoo OS!", Rgb(255, 255, 0), Rgb(0, 0, 0), TRUE);
+    
+	// ⑤ 画面描画終了後
+	EventLoop(Gop);
 
-    // ⑦ 終了前のキー入力待ち
-    Print(L"Press any key to exit...\n");
-    EFI_INPUT_KEY Key;
-    UINTN EventIndex;
-    gBS->WaitForEvent(1, &gST->ConIn->WaitForKey, &EventIndex);
-    gST->ConIn->ReadKeyStroke(gST->ConIn, &Key);
+
 
     return EFI_SUCCESS;
 }
