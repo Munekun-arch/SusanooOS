@@ -58,6 +58,18 @@ UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     INTN titleHeight = 40;
     DrawRect(Gop, 0, 0, Gop->Mode->Info->HorizontalResolution, titleHeight, Rgb(0, 0, 180));
     DrawString(Gop, 10, 10, L"Susanoo OS UI Test", Rgb(255, 255, 255), Rgb(0, 0, 180), TRUE);
+    
+	// ⑦ メニュー項目の描画（描画のみ）
+	CONST CHAR16* MenuItems[] = { L"File", L"Settings", L"Exit" };
+	INTN MenuCount = sizeof(MenuItems) / sizeof(MenuItems[0]);
+	INTN menuX = 20;
+	INTN menuY = titleHeight + 5;
+
+	for (INTN i = 0; i < MenuCount; i++) {
+    	DrawString(Gop, menuX, menuY, MenuItems[i], Rgb(255,255,255), Rgb(0,0,128), TRUE);
+    	menuX += 120;  // 項目の間隔
+	}
+
 
     // ④ FS プロトコル取得
     Status = gBS->HandleProtocol(ImageHandle, &gEfiLoadedImageProtocolGuid, (VOID**)&LoadedImage);
@@ -87,6 +99,12 @@ UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     // ⑥ 下部にテキスト描画（黄文字）
     INTN textY = baseY + 100;
     DrawString(Gop, 40, textY, L"Hello, Susanoo OS!", Rgb(255, 255, 0), Rgb(0, 0, 0), TRUE);
+    
+	// テスト用ウィンドウ描画
+	DrawWindow(Gop, 100, 200, 200, 120, L"Test Window");
+	DrawWindow(Gop, 350, 250, 180, 100, L"Info");
+
+    
     
 	// ⑤ 画面描画終了後
 	EventLoop(Gop);

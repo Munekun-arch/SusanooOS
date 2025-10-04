@@ -1,4 +1,6 @@
 #include "Graphics.h"
+#include "Text.h"
+
 
 VOID PutPixel(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X, INTN Y, UINT32 Color) {
     if (X < 0 || Y < 0) return;
@@ -52,4 +54,25 @@ VOID DrawLine(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, INTN X0, INTN Y0, INTN X1, INTN
         }
     }
 }
+
+// 基本ウィンドウ描画
+VOID DrawWindow(
+    EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop,
+    INTN X, INTN Y, INTN W, INTN H,
+    CHAR16 *Title
+) {
+    // 本体（背景：明るいグレー）
+    DrawRect(Gop, X, Y, W, H, Rgb(200, 200, 200));
+
+    // 枠線（黒）
+    DrawLine(Gop, X, Y, X+W-1, Y, Rgb(0,0,0));
+    DrawLine(Gop, X, Y+H-1, X+W-1, Y+H-1, Rgb(0,0,0));
+    DrawLine(Gop, X, Y, X, Y+H-1, Rgb(0,0,0));
+    DrawLine(Gop, X+W-1, Y, X+W-1, Y+H-1, Rgb(0,0,0));
+
+    // タイトルバー（濃青）＋白文字
+    DrawRect(Gop, X, Y, W, 20, Rgb(0, 0, 128));
+    DrawString(Gop, X+5, Y+4, Title, Rgb(255,255,255), Rgb(0,0,128), TRUE);
+}
+
 

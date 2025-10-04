@@ -20,7 +20,7 @@ VOID DrawChar(
     for (INTN yy = 0; yy < FONT_HEIGHT; yy++) {
         UINT8 line = glyph[yy];
         for (INTN xx = 0; xx < FONT_WIDTH; xx++) {
-            if (line & (1 << (7 - xx))) {
+            if (line & (1 << xx)) {
                 PutPixel(Gop, X + xx, Y + yy, FgColor);
             } else if (!Transparent) {
                 PutPixel(Gop, X + xx, Y + yy, BgColor);
