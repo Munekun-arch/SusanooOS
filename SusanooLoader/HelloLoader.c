@@ -7,10 +7,10 @@
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/LoadedImage.h>
-
 #include "Graphics.h"
 #include "BmpLoader.h"
 #include "Text.h"
+#include "Window.h"
 
 void EventLoop(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop) {
     EFI_INPUT_KEY Key;
@@ -100,9 +100,13 @@ UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     INTN textY = baseY + 100;
     DrawString(Gop, 40, textY, L"Hello, Susanoo OS!", Rgb(255, 255, 0), Rgb(0, 0, 0), TRUE);
     
-	// テスト用ウィンドウ描画
-	DrawWindow(Gop, 100, 200, 200, 120, L"Test Window");
-	DrawWindow(Gop, 350, 250, 180, 100, L"Info");
+	// ウィンドウ管理テスト
+	WINDOW win1 = { 50,  80, 200, 120, L"Main Window",   TRUE };
+	WINDOW win2 = { 300, 80, 200, 120, L"Second Window", FALSE };
+
+	DrawWindow(Gop, &win1);
+	DrawWindow(Gop, &win2);
+	
 
     
     
