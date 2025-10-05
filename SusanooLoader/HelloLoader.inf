@@ -11,7 +11,8 @@
   BmpLoader.c
   Graphics.c
   Text.c
-  Window.c  
+  Window.c
+  WindowManager.c  
   Font8x16.c
 
 [Packages]
@@ -29,6 +30,7 @@
   gEfiSimpleFileSystemProtocolGuid
   gEfiLoadedImageProtocolGuid
   gEfiGraphicsOutputProtocolGuid
+  gEfiSimplePointerProtocolGuid
 
 [Guids]
   gEfiFileInfoGuid

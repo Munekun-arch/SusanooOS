@@ -4,18 +4,20 @@
 #include "Text.h"
 
 VOID DrawWindow(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, WINDOW *Win) {
-    // 外枠
-    DrawRect(Gop, Win->X, Win->Y, Win->Width, Win->Height, Rgb(200, 200, 200));
+    // 背景
+    DrawRect(Gop, Win->X, Win->Y, Win->Width, Win->Height, Win->BgColor);
 
     // タイトルバー
     INTN titleHeight = 20;
-    UINT32 titleColor = Win->Active ? Rgb(0, 0, 180) : Rgb(100, 100, 100);
-    DrawRect(Gop, Win->X, Win->Y, Win->Width, titleHeight, titleColor);
+    DrawRect(Gop, Win->X, Win->Y, Win->Width, titleHeight, Win->TitleColor);
 
     // タイトル文字
-    DrawString(Gop, Win->X + 5, Win->Y + 4, Win->Title, Rgb(255, 255, 255), titleColor, TRUE);
+    DrawString(Gop, Win->X + 5, Win->Y + 4, Win->Title, Rgb(255,255,255), Win->TitleColor, TRUE);
 
-    // 内容領域（背景）
-    DrawRect(Gop, Win->X, Win->Y + titleHeight, Win->Width, Win->Height - titleHeight, Rgb(50, 50, 50));
+    // 枠線
+    DrawRect(Gop, Win->X, Win->Y, Win->Width, 1, Rgb(255,255,255)); // 上
+    DrawRect(Gop, Win->X, Win->Y + Win->Height - 1, Win->Width, 1, Rgb(255,255,255)); // 下
+    DrawRect(Gop, Win->X, Win->Y, 1, Win->Height, Rgb(255,255,255)); // 左
+    DrawRect(Gop, Win->X + Win->Width - 1, Win->Y, 1, Win->Height, Rgb(255,255,255)); // 右
 }
 

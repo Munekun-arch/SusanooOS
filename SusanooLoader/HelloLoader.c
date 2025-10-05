@@ -7,34 +7,77 @@
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/LoadedImage.h>
+#include <Protocol/SimplePointer.h>
+
 #include "Graphics.h"
 #include "BmpLoader.h"
 #include "Text.h"
-#include "Window.h"
+#include "Window.h"   // ← 追加済み（構造体対応）
 
-void EventLoop(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop) {
+// ======================================================
+// キー入力イベントループ（ESCで終了）
+// ======================================================
+void EventLoop(EFI_GRAPHICS_OUTPUT_PROTOCOL *Gop, EFI_SIMPLE_POINTER_PROTOCOL *Mouse) {
     EFI_INPUT_KEY Key;
     EFI_STATUS Status;
+    EFI_SIMPLE_POINTER_STATE MouseState; 
     UINTN EventIndex;
 
-    Print(L"Event loop started. Press ESC to exit.\n");
+    // カーソル座標初期化
+    INTN MouseX = Gop->Mode->Info->HorizontalResolution / 2;
+    INTN MouseY = Gop->Mode->Info->VerticalResolution / 2;
+    const INTN CursorSize = 8;
+
+    // 初期カーソル描画
+    DrawRect(Gop, MouseX, MouseY, CursorSize, CursorSize, Rgb(255,255,255));
 
     while (TRUE) {
-        // 1. キー入力イベント待機
-        gBS->WaitForEvent(1, &gST->ConIn->WaitForKey, &EventIndex);
-        Status = gST->ConIn->ReadKeyStroke(gST->ConIn, &Key);
-        if (EFI_ERROR(Status)) continue;
+        EFI_EVENT Events[2];
+        UINTN EventCount = 1;
+        Events[0] = gST->ConIn->WaitForKey;
 
-        // 2. キーの種類で分岐
-        if (Key.ScanCode == SCAN_ESC) {
-            Print(L"ESC pressed. Exiting event loop.\n");
-            break;
-        } else if (Key.UnicodeChar != 0) {
-            Print(L"Key pressed: %c\n", Key.UnicodeChar);
+        if (Mouse) {
+            Events[1] = Mouse->WaitForInput;
+            EventCount = 2;
+        }
+
+        gBS->WaitForEvent(EventCount, Events, &EventIndex);
+
+        if (EventIndex == 0) {
+            Status = gST->ConIn->ReadKeyStroke(gST->ConIn, &Key);
+            if (!EFI_ERROR(Status) && Key.ScanCode == SCAN_ESC) {
+                break;
+            }
+        } else if (Mouse && EventIndex == 1) {
+            Status = Mouse->GetState(Mouse, &MouseState);
+            if (EFI_ERROR(Status)) continue;
+
+            // 旧カーソルを消す
+            DrawRect(Gop, MouseX, MouseY, CursorSize, CursorSize, Rgb(0,0,0));
+
+            // 相対移動を反映
+            MouseX += MouseState.RelativeMovementX / 2;
+            MouseY -= MouseState.RelativeMovementY / 2;
+
+            // 画面内に収める
+            if (MouseX < 0) MouseX = 0;
+            if (MouseY < 0) MouseY = 0;
+            if (MouseX > (INTN)Gop->Mode->Info->HorizontalResolution - CursorSize)
+                MouseX = Gop->Mode->Info->HorizontalResolution - CursorSize;
+            if (MouseY > (INTN)Gop->Mode->Info->VerticalResolution - CursorSize)
+                MouseY = Gop->Mode->Info->VerticalResolution - CursorSize;
+
+            // 新カーソル描画
+            DrawRect(Gop, MouseX, MouseY, CursorSize, CursorSize, Rgb(255,255,255));
         }
     }
 }
 
+
+
+// ======================================================
+// エントリーポイント
+// ======================================================
 EFI_STATUS
 EFIAPI
 UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
@@ -57,21 +100,17 @@ UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     // ③ タイトルバー描画（青地に白文字）
     INTN titleHeight = 40;
     DrawRect(Gop, 0, 0, Gop->Mode->Info->HorizontalResolution, titleHeight, Rgb(0, 0, 180));
-    DrawString(Gop, 10, 10, L"Susanoo OS UI Test", Rgb(255, 255, 255), Rgb(0, 0, 180), TRUE);
-    
-	// ⑦ メニュー項目の描画（描画のみ）
-	CONST CHAR16* MenuItems[] = { L"File", L"Settings", L"Exit" };
-	INTN MenuCount = sizeof(MenuItems) / sizeof(MenuItems[0]);
-	INTN menuX = 20;
-	INTN menuY = titleHeight + 5;
+      DrawString(Gop, 10, 10, L"Mouse Test", Rgb(255,255,0), Rgb(0,0,0), TRUE);
 
-	for (INTN i = 0; i < MenuCount; i++) {
-    	DrawString(Gop, menuX, menuY, MenuItems[i], Rgb(255,255,255), Rgb(0,0,128), TRUE);
-    	menuX += 120;  // 項目の間隔
+    // 🖱 マウスプロトコル取得
+	EFI_SIMPLE_POINTER_PROTOCOL *Mouse;
+	Status = gBS->LocateProtocol(&gEfiSimplePointerProtocolGuid, NULL, (VOID**)&Mouse);
+	if (EFI_ERROR(Status)) {
+	    Print(L"Mouse protocol not found: %r\n", Status);
+	    Mouse = NULL;
 	}
 
-
-    // ④ FS プロトコル取得
+    // ④ ファイルシステム取得
     Status = gBS->HandleProtocol(ImageHandle, &gEfiLoadedImageProtocolGuid, (VOID**)&LoadedImage);
     if (EFI_ERROR(Status)) {
         Print(L"Failed to get LoadedImage: %r\n", Status);
@@ -96,24 +135,19 @@ UefiMain (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable) {
     LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\green32.bmp", 150, baseY);
     LoadBmpAndDraw(Root, L"\\EFI\\BOOT\\blue32.bmp",  250, baseY);
 
-    // ⑥ 下部にテキスト描画（黄文字）
+    // ⑥ テキスト描画（黄文字）
     INTN textY = baseY + 100;
     DrawString(Gop, 40, textY, L"Hello, Susanoo OS!", Rgb(255, 255, 0), Rgb(0, 0, 0), TRUE);
-    
-	// ウィンドウ管理テスト
-	WINDOW win1 = { 50,  80, 200, 120, L"Main Window",   TRUE };
-	WINDOW win2 = { 300, 80, 200, 120, L"Second Window", FALSE };
 
-	DrawWindow(Gop, &win1);
-	DrawWindow(Gop, &win2);
-	
+    // ⑦ ウィンドウ描画（構造体対応）
+    WINDOW MainWindow = { 100, 300, 300, 200, L"Main Window", Rgb(200,200,255), Rgb(0,0,128) };
+    DrawWindow(Gop, &MainWindow);
 
-    
-    
-	// ⑤ 画面描画終了後
-	EventLoop(Gop);
+    WINDOW SecondWindow = { 450, 300, 250, 150, L"Second Window", Rgb(255,255,200), Rgb(128,0,0) };
+    DrawWindow(Gop, &SecondWindow);
 
-
+    // ⑧ イベントループ
+    EventLoop(Gop, Mouse);
 
     return EFI_SUCCESS;
 }
