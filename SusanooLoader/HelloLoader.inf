@@ -16,7 +16,7 @@
   Font8x16.c
 
 [Packages]
-  MdePkg/MdePkg.dec
+  /home/munehiro/edk2/MdePkg/MdePkg.dec
 
 [LibraryClasses]
   UefiLib

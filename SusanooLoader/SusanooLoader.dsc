@@ -10,38 +10,38 @@
 
 [LibraryClasses]
   # 基本
-  BaseLib                   | MdePkg/Library/BaseLib/BaseLib.inf
-  BaseMemoryLib             | MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
-  MemoryAllocationLib       | MdePkg/Library/UefiMemoryAllocationLib/UefiMemoryAllocationLib.inf
-  DebugLib                  | MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
-  PrintLib                  | MdePkg/Library/BasePrintLib/BasePrintLib.inf
-  PcdLib                    | MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
-  RegisterFilterLib         | MdePkg/Library/RegisterFilterLibNull/RegisterFilterLibNull.inf
+  BaseLib                   | ../edk2/MdePkg/Library/BaseLib/BaseLib.inf
+  BaseMemoryLib             | ../edk2/MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
+  MemoryAllocationLib       | ../edk2/MdePkg/Library/UefiMemoryAllocationLib/UefiMemoryAllocationLib.inf
+  DebugLib                  | ../edk2/MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
+  PrintLib                  | ../edk2/MdePkg/Library/BasePrintLib/BasePrintLib.inf
+  PcdLib                    | ../edk2/MdePkg/Library/BasePcdLibNull/BasePcdLibNull.inf
+  RegisterFilterLib         | ../edk2/MdePkg/Library/RegisterFilterLibNull/RegisterFilterLibNull.inf
 
   # UEFI 基本
-      UefiLib                   | MdePkg/Library/UefiLib/UefiLib.inf
-  UefiApplicationEntryPoint | MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
- StackCheckLib             | MdePkg/Library/StackCheckLib/StackCheckLib.inf
-  StackCheckFailureHookLib  | MdePkg/Library/StackCheckFailureHookLibNull/StackCheckFailureHookLibNull.inf
+      UefiLib                   | ../edk2/MdePkg/Library/UefiLib/UefiLib.inf
+  UefiApplicationEntryPoint | ../edk2/MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
+ StackCheckLib             | ../edk2/MdePkg/Library/StackCheckLib/StackCheckLib.inf
+  StackCheckFailureHookLib  | ../edk2/MdePkg/Library/StackCheckFailureHookLibNull/StackCheckFailureHookLibNull.inf
 
-  UefiBootServicesTableLib  | MdePkg/Library/UefiBootServicesTableLib/UefiBootServicesTableLib.inf
-  UefiRuntimeServicesTableLib | MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
-  DevicePathLib             | MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+  UefiBootServicesTableLib  | ../edk2/MdePkg/Library/UefiBootServicesTableLib/UefiBootServicesTableLib.inf
+  UefiRuntimeServicesTableLib | ../edk2/MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
+  DevicePathLib             | ../edk2/MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
 
   # 便利系
-  HiiLib                    | MdeModulePkg/Library/UefiHiiLib/UefiHiiLib.inf
-  FileHandleLib             | MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
-  ShellLib                  | ShellPkg/Library/UefiShellLib/UefiShellLib.inf
+  HiiLib                    | ../edk2/MdeModulePkg/Library/UefiHiiLib/UefiHiiLib.inf
+  FileHandleLib             | ../edk2/MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
+  ShellLib                  | ../edk2/ShellPkg/Library/UefiShellLib/UefiShellLib.inf
   
-  DevicePathLib     | MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
-  FileHandleLib     | MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
+  DevicePathLib     | ../edk2/MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+  FileHandleLib     | ../edk2/MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
 
   
 
 
 
 [Components]
-  ../SusanooLoader/HelloLoader.inf
+	SusanooLoader/HelloLoader.inf
 
 
 
